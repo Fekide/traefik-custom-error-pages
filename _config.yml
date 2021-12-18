@@ -21,8 +21,7 @@ markdown: kramdown
 source: src
 
 plugins:
-  - octopress-minify-html
-  - jekyll-assets
+  - jekyll-minifier
 
 # Exclude from processing.
 # The following items will not be processed, by default. Create a custom list
