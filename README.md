@@ -1,11 +1,10 @@
-[![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.me/guillaumebriday)
-[![Docker Pulls](https://img.shields.io/docker/pulls/guillaumebriday/traefik-custom-error-pages.svg)](https://hub.docker.com/r/guillaumebriday/traefik-custom-error-pages/)
-[![Docker Stars](https://img.shields.io/docker/stars/guillaumebriday/traefik-custom-error-pages.svg)](https://hub.docker.com/r/guillaumebriday/traefik-custom-error-pages/)
-[![Netlify Status](https://api.netlify.com/api/v1/badges/64de9cea-fa16-4f76-b5b8-a1abb5eb4e2f/deploy-status)](https://app.netlify.com/sites/traefik-custom-error-pages/deploys)
 
-# ⚠️ DEPRECATION WARNING ⚠️
+[![Docker Pulls](https://img.shields.io/docker/pulls/fekide/traefik-custom-error-pages.svg)](https://hub.docker.com/r/fekide/traefik-custom-error-pages/)
+[![Docker Stars](https://img.shields.io/docker/stars/fekide/traefik-custom-error-pages.svg)](https://hub.docker.com/r/fekide/traefik-custom-error-pages/)
 
-I'm not using this image anymore. I switched from Traefik to [Caddy](https://caddyserver.com) because Traefik is far too complicated for **my** needs. This image works as it. If you want new features, feel free to fork the project. An alternative project for the traefik error pages is [tarampampam/error-pages](https://github.com/tarampampam/error-pages).
+# Fork from [guillaumebriday/traefik-custom-error-pages](https://github.com/guillaumebriday/traefik-custom-error-pages)
+
+This is a fork of the project by @guillaumebriday in order to provide some additional features of fix issues with the original version.
 
 # Custom error pages for Traefik
 
@@ -40,18 +39,43 @@ Run the container with labels, **change with your needs**:
 ```yml
 # docker-compose.yml
 
-errorpage:
-  image: guillaumebriday/traefik-custom-error-pages
-  restart: unless-stopped
-  networks:
-    - web
-  labels:
-    - traefik.enable: "true"
-    - traefik.docker.network: "web"
-    - traefik.http.routers.errorpage.entrypoints: "websecure"
-    - traefik.http.routers.errorpage.rule: "HostRegexp(`{host:.+}`)"
-    - traefik.http.services.globalerrorpage.loadbalancer.server.port: "80"
+  errorpage:
+    image: fekide/traefik-custom-error-pages
+    restart: unless-stopped
+    networks:
+      - web
+    labels:
+      # ...
+      # default traefik configuration
+      # ...
+      - traefik.http.routers.errorpage.entrypoints: "websecure"
+      - traefik.http.routers.errorpage.rule: "HostRegexp(`{host:.+}`)"
+      - traefik.http.services.globalerrorpage.loadbalancer.server.port: "80"
+      # The following is a middleware that gets activated when a service returns an error
+      # It needs to be added to the middlewares of the respective router (see example below)
+      - traefik.http.middlewares.errorpage.errors.status: 400-599
+      - traefik.http.middlewares.errorpage.errors.service: globalerrorpage
+      - traefik.http.middlewares.errorpage.errors.query: /{status}
+
+  app: 
+  # ...
+    labels:
+      # ...
+      # other traefik configuration
+      # ...
+      - traefik.http.routers.app.middlewares: errorpage # ... other middlewares
+
 ```
+
+> Due to the current implementation of the error middleware it is not possible to catch for example all traefik related errors (Service unavailable / Bad Gateway) without specifying them directly. It is possible however to add it to all routers by default:
+> ```toml
+> # Static traefik configuration
+> [entryPoints.<name of entrypoint>.http]
+> # in brackets the name of the middleware above
+> middlewares = ["errorpage@docker"]
+> ```
+> However this will overwrite **ALL** requests with 400-599 codes, also ones to non HTML endpoints (like APIs) so it is **NOT RECOMMENDED**
+
 
 ## Build the image
 
